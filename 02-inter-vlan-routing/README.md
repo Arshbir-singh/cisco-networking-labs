@@ -154,8 +154,7 @@ The router subinterfaces should be operational and have the expected IP addresse
 The subinterface configuration should show the VLAN encapsulation and gateway addresses.
 
 ```cisco
-show running-config interface gigabitEthernet 0/0.10
-show running-config interface gigabitEthernet 0/0.20
+show running-config
 ```
 
 ![R1 Subinterface Configuration](screenshots/r1-subinterface-config.png)
