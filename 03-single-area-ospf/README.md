@@ -161,7 +161,7 @@ ping <remote-host-ip>
 Because the topology contains multiple paths, traceroute can be used to observe the path selected by the routing table.
 
 ```text
-tracert <destination-ip>
+traceroute <destination-ip>
 ```
 
 ![OSPF Traceroute](screenshots/ospf-traceroute.png)
