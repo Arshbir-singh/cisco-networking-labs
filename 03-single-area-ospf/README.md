@@ -158,10 +158,10 @@ ping <remote-host-ip>
 
 ## Path Verification
 
-Because the topology contains multiple paths, traceroute can be used to observe the path selected by the routing table.
+Because the topology contains multiple paths, traceroute can be used to observe the path selected by the routing table. Here i traced the path taken by PC1 to PC3.
 
 ```text
-traceroute <destination-ip>
+traceroute 192.168.3.1
 ```
 
 ![OSPF Traceroute](screenshots/ospf-traceroute.png)
