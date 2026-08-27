@@ -44,6 +44,14 @@ The multiple router-to-router paths allow OSPF to dynamically determine routes t
 | R2 | `192.168.2.0/24` |
 | R3 | `192.168.3.0/24` |
 | R4 | `192.168.4.0/24` |
+### Loopback Interfaces
+
+| Router | Loopback Address | Purpose |
+|---|---|---|
+| R1 | `1.1.1.1/32` | OSPF router ID / logical interface |
+| R2 | `2.2.2.2/32` | OSPF router ID / logical interface |
+| R3 | `3.3.3.3/32` | OSPF router ID / logical interface |
+| R4 | `4.4.4.4/32` | OSPF router ID / logical interface |
 
 
 
@@ -69,16 +77,24 @@ router ospf 1
 
 The exact network statements and router IDs should match the configuration used on each router.
 
-## Loopback Interfaces
+## OSPF Router ID Selection
 
-Loopback interfaces can provide stable logical interfaces and additional destinations for OSPF route advertisement and testing.
+No explicit `router-id` command was configured.
 
-Example:
+Each router has a loopback interface with a unique /32 address. When an explicit OSPF router ID is not configured, OSPF can select the highest IP address on a loopback interface as the router ID.
 
-```cisco
-interface Loopback0
- ip address 4.4.4.4 255.255.255.255
-```
+In this lab, the loopback addresses provide deterministic router IDs:
+
+| Router | Loopback | OSPF Router ID |
+|---|---|---|
+| R1 | `1.1.1.1` | `1.1.1.1` |
+| R2 | `2.2.2.2` | `2.2.2.2` |
+| R3 | `3.3.3.3` | `3.3.3.3` |
+| R4 | `4.4.4.4` | `4.4.4.4` |
+
+This demonstrates how loopback interfaces can be used to provide stable OSPF router IDs without manually configuring the `router-id` command.
+
+> **Note:** OSPF selects its router ID when the OSPF process starts. If a loopback is added or changed after the process has already selected a router ID, the OSPF process may need to be restarted for the new router ID to be selected
 
 ## Verification
 
