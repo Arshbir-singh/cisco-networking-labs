@@ -182,6 +182,61 @@ traceroute 192.168.3.1
 
 ![OSPF Traceroute](screenshots/ospf-traceroute.png)
 
+
+### Failure
+
+```
+R1(config)#int g0/1
+R1(config-if)#shutdown
+```
+![interface shutdown](screenshots/link-r1-r4-shutdown.png)
+
+R1's routing table immediately reflects the loss:
+
+| Destination | Before | After |
+|---|---|---|
+| `4.4.4.4/32`, `192.168.4.0/24` | `[110/2]` via 10.0.10.2 (direct) | `[110/4]` via 10.0.1.2 (via R2 → R3) |
+| `3.3.3.3/32`, `192.168.3.0/24` | Two equal `[110/3]` paths (via R2 and via R4) | One `[110/3]` path only (via R2) |
+| `2.2.2.2/32`, `192.168.2.0/24` | `[110/2]` via 10.0.1.2 | Unchanged — never used the failed link |
+
+![ip route](screenshots/ospf-show-ip-route-after.png)
+
+The middle row is the detail that matters most: R3's equal-cost pair collapses to a single path because one of its two contributing routes ran through the now-dead link — proof the ECMP wasn't a coincidence, it was genuinely built on two independent paths.
+
+End-to-end traffic confirms it, not just the table:
+
+```
+traceroute 192.168.4.1
+```
+![traceroute](screenshots/connectivity-and-tracert-check.png)
+Traffic takes the long way around the ring — R1 → R2 → R3 → R4 — and still arrives with zero loss.
+
+### Recovery
+
+```
+R1(config)#int g0/1
+R1(config-if)#no shutdown
+```
+![re-enabling](screenshots/re-enabling-interface.png)
+
+The routing table fully reconverges — including the ECMP pair for R3, which returns to two equal paths, not just one:
+
+```
+O  4.4.4.4/32 [110/2] via 10.0.10.2, GigabitEthernet0/1
+O  3.3.3.3/32 [110/3] via 10.0.1.2, GigabitEthernet0/0
+              [110/3] via 10.0.10.2, GigabitEthernet0/1
+```
+![re-enabling ip route](screenshots/show-ip-route-re-enabling.png)
+
+
+And traffic returns to the direct path:
+
+```
+C:\>tracert 192.168.4.1
+```
+![re-enabling tracert](screenshots/tracert-after-re-enabling.png)
+Three hops instead of five, straight through R4 again — the network fully healed itself with no manual routing changes anywhere
+
 ## Expected Results
 
 | Verification | Expected Result |
