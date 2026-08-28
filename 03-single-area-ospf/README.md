@@ -235,6 +235,8 @@ And traffic returns to the direct path:
 C:\>tracert 192.168.4.1
 ```
 ![re-enabling tracert](screenshots/tracert-after-re-enabling.png)
+
+
 Three hops instead of five, straight through R4 again — the network fully healed itself with no manual routing changes anywhere
 
 ## Expected Results
