@@ -209,6 +209,7 @@ End-to-end traffic confirms it, not just the table:
 traceroute 192.168.4.1
 ```
 ![traceroute](screenshots/connectivity-and-tracert-check.png)
+
 Traffic takes the long way around the ring — R1 → R2 → R3 → R4 — and still arrives with zero loss.
 
 ### Recovery
@@ -232,7 +233,7 @@ O  3.3.3.3/32 [110/3] via 10.0.1.2, GigabitEthernet0/0
 And traffic returns to the direct path:
 
 ```
-C:\>tracert 192.168.4.1
+traceroute 192.168.4.1
 ```
 ![re-enabling tracert](screenshots/tracert-after-re-enabling.png)
 
