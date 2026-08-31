@@ -202,8 +202,6 @@ ip dhcp snooping
 ip dhcp snooping vlan 1
 ```
 
-The VLAN number should match the final VLAN configuration in the Packet Tracer file.
-
 The interface toward the legitimate DHCP server is trusted:
 
 ```cisco
