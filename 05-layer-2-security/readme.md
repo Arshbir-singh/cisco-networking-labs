@@ -3,9 +3,9 @@
 Access-layer hardening on a Cisco 2960 switch, demonstrating three Layer 2 controls
 working together — and, for each one, the attack it stops.
 
-Each control is shown twice: once with the network unprotected so the attack succeeds,
-and once with the control enabled so it fails. The unprotected state is the point of the
-lab; without it, the configuration is an assertion rather than a demonstration.
+Where the simulator allows it, each control is shown twice: once with the network
+unprotected so the attack succeeds, and once with the control enabled so it fails.
+Where it does not, the limitation is stated rather than worked around.
 
 **Built in:** Cisco Packet Tracer
 **Devices:** 2960 switch (SW1), 2911 router (R1, acting as DHCP server), 3 client PCs, 1 rogue DHCP server
@@ -111,7 +111,7 @@ interface range FastEthernet0/1-3
  switchport mode access
  switchport access vlan 10
  switchport port-security
-switchport port-security maximum 1
+ switchport port-security maximum 1
  switchport port-security mac-address sticky
  switchport port-security violation restrict
 ```
@@ -155,8 +155,8 @@ Sticky MAC Addresses 1, Violation Mode `Restrict`.
 
 ### Violation test
 
-**Method:** "changed PC0's MAC address in Config > FastEthernet0 to  0030.F2B8.56E6   while it remained connected 
- to Fa0/1" 
+**Method:** PC0's MAC address was changed in Config > FastEthernet0 to
+`0030.F2B8.56E6` while it remained connected to Fa0/1. 
 
 **Before — violation counter at 0:**
 
@@ -194,11 +194,12 @@ ipconfig /renew
 ![Poisoned Client Lease](screenshots/dhcp-client-poisoned-lease.png)
 
 
+```text
 IP Address:       192.168.1.100
 Subnet Mask:      255.255.255.0
 Default Gateway:  192.168.1.254   <-- rogue
 DNS Server:       1.1.1.1         <-- rogue
-
+```
 
 The client accepted the rogue lease. Its default gateway now points at an attacker-
 controlled address — the setup for an on-path (man-in-the-middle) attack, since all
@@ -250,7 +251,7 @@ Packet Tracer's simulation mode was used to observe the rogue OFFER being discar
 > switch configuration and `show ip dhcp snooping` output are the authoritative evidence
 > here; the simulation trace is supporting context only.
 
-
+---
 
 ## Part 3 — Dynamic ARP Inspection
 
