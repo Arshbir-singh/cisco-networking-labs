@@ -359,7 +359,6 @@ show ip dhcp snooping binding
 show ip arp inspection
 show ip arp inspection interfaces
 show vlan brief
-show spanning-tree interface fa0/1 detail
 ```
 
 
