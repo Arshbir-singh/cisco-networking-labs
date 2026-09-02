@@ -313,6 +313,10 @@ interface range FastEthernet0/5-24
  switchport mode access
  switchport access vlan 999
  shutdown
+interface g0/2
+ switchport mode access
+ switchport access vlan 999
+ shutdown
 ```
 
 | Command | Attack mitigated |
