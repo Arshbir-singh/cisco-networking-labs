@@ -111,6 +111,7 @@ interface range FastEthernet0/1-3
  switchport mode access
  switchport access vlan 10
  switchport port-security
+switchport port-security maximum 1
  switchport port-security mac-address sticky
  switchport port-security violation restrict
 ```
@@ -154,7 +155,7 @@ Sticky MAC Addresses 1, Violation Mode `Restrict`.
 
 ### Violation test
 
-**Method:**  e.g. "changed PC0's MAC address inConfig > FastEthernet0 to  0030.F2B8.56E6   while it remained connected 
+**Method:** "changed PC0's MAC address in Config > FastEthernet0 to  0030.F2B8.56E6   while it remained connected 
  to Fa0/1" 
 
 **Before — violation counter at 0:**
@@ -223,7 +224,6 @@ Same rogue server, same renewal, snooping enabled:
 
 ![Legitimate DHCP Lease](screenshots/dhcp-client-legitimate-lease.png)
 
-<!-- VERIFY: paste the actual clean ipconfig output -->
 
 ### Verification
 
@@ -275,10 +275,19 @@ broken.
 
 ### Why the rogue server fails DAI
 
-The rogue at `192.168.1.250` is also statically addressed and also has no snooping
-binding. Unlike R1, it sits on an untrusted access port. Any ARP it sources is therefore
-unverifiable and dropped — including the gratuitous ARP an attacker would use to claim the
-gateway address.
+The rogue at `192.168.1.250` is statically addressed and has no DHCP snooping
+binding. It sits on an untrusted access port, so on production hardware any ARP it
+sources — including the gratuitous ARP an attacker would use to claim the gateway
+address — cannot be validated and is dropped.
+
+> **Simulator limitation:** Packet Tracer accepts the DAI configuration and reports
+> VLAN 10 as Enabled/Active with all three validations on, but does not enforce ARP
+> validation in the data path. All counters (Forwarded, Dropped, DHCP Drops, ACL
+> Drops) remain at zero, and the rogue server can still reach clients. This was
+> confirmed after clearing ARP caches on all hosts and resetting the inspection
+> statistics. The configuration and interface trust states are therefore the
+> evidence for this section; a live drop capture would require CML, GNS3 or EVE-NG
+> with real IOS images.
 
 
 
@@ -292,7 +301,6 @@ show ip arp inspection interfaces
 ![DAI Status](screenshots/arp-inspection.png)
 ![DAI Interfaces](screenshots/arp-inspection-interfaces.png)
 
-Legitimate client-to-client and client-to-gateway connectivity was re-tested after enabling
 
 ---
 
@@ -324,8 +332,6 @@ interface g0/2
 | `spanning-tree bpduguard enable` | STP root-bridge takeover from an access port |
 | `switchport nonegotiate` | DTP-based switch spoofing / VLAN hopping |
 | Unused ports shut into VLAN 999 | Unauthorized physical connection |
-
-<
 
 ---
 
@@ -386,17 +392,26 @@ Packet Tracer simplifies several behaviors that matter on production hardware:
 
 ---
 
+
 ## What I Took Away From This Lab
 
-The DAI trust boundary was the part that actually taught me something. My first attempt
-broke the whole network — enabling `ip arp inspection` dropped R1's ARP replies because a
-statically addressed gateway has no DHCP snooping binding to validate against, and every
-client lost its default gateway. That failure made the dependency between the three
-controls concrete in a way that reading about it did not.
+The troubleshooting taught me more than the configuration. After enabling DHCP
+snooping, every client dropped to an APIPA address and lost the gateway. The
+obvious suspects were the trust state and Option 82, but `show ip dhcp snooping`
+ruled both out — Gi0/1 was trusted and Option 82 insertion was already disabled.
+The actual cause was visible in `ipconfig /all`: clients were still holding a DHCP
+server address from the pre-migration subnet, and the uplink had not been moved
+into the client VLAN with the access ports. Snooping was working correctly on a
+VLAN that had no gateway in it.
 
-The second lesson was that sticky MAC addresses only persist if the configuration is saved,
-which makes the control look correct in `show` output while being one reload away from
-doing nothing.
+The second lesson was that sticky MAC addresses only persist if the configuration
+is saved, which makes the control look correct in `show` output while being one
+reload away from doing nothing.
+
+The third was that DAI has no independent source of truth. It validates only
+against the DHCP snooping bindings, which is why a statically addressed gateway
+needs an explicitly trusted uplink and why enabling DAI on a network of static
+hosts breaks connectivity rather than securing it.
 
 ---
 
