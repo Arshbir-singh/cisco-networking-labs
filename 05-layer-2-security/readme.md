@@ -45,7 +45,7 @@ lab; without it, the configuration is an assertion rather than a demonstration.
                                 |
                                R1
                     Legitimate DHCP server
-                       192.168.10.1/24
+                       192.168.1.1/24
                                 |
                           VLAN 10 access
                                 |
