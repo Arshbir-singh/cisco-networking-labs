@@ -21,7 +21,7 @@ The focus of this project is **policy design and device hardening**, not just AC
 
 ## Topology
 
-![Topology](docs/topology.png)
+![Topology](screenshots/topology.png)
 
 | Segment | Subnet | VLAN | Role |
 |---|---|---|---|
@@ -184,9 +184,9 @@ Each user role was tested from its own workstation. Because the Packet Tracer co
 | T4 | PC1 → PC4 (HR), ping | Deny |
 | T13 | PC1 → SSH to SW2 | Deny |
 
-![Sales policy enforcement](docs/screenshots/pc1-sales.png)
+![Sales policy enforcement](screenshots/pc1-sales.png)
 
-![Sales policy enforcement](docs/screenshots/pc1-sales-deny.png)
+
 
 Denied traffic returns *destination host unreachable* rather than a timeout, because R1 actively rejects it at the ACL rather than silently dropping.
 
@@ -199,9 +199,9 @@ Denied traffic returns *destination host unreachable* rather than a timeout, bec
 | T7 | PC3 → web server, ping | Permit |
 | T12 | PC3 → SSH to SW3 | Deny |
 
-![HR policy enforcement](docs/screenshots/pc3-hr.png)
+![HR policy enforcement](screenshots/pc3-hr.png)
 
-![HR policy enforcement](docs/screenshots/pc3-hr-ssh.png)
+
 
 ### IT (PC5) — unrestricted
 
@@ -212,18 +212,18 @@ Denied traffic returns *destination host unreachable* rather than a timeout, bec
 | T10 | PC5 → both servers, ping | Permit |
 | T11 | PC5 → SSH to R1 | Permit |
 
-![IT full access](docs/screenshots/pc5-it.png)
-![IT full access](docs/screenshots/pc5-it-ssh.png)
+![IT full access](screenshots/pc5-it.png)
+![IT full access](screenshots/pc5-it-ssh.png)
 
 ### Web access (T1)
 
-![Sales HTTP access to DMZ web server](docs/screenshots/pc1-http.png)
+![Sales HTTP access to DMZ web server](screenshots/pc1-http.png)
 
 Sales reaches the web server over HTTP while every other destination is denied — the permit and the deny in the same policy.
 
 ### ACL hit counters
 
-![R1 access-list counters](docs/screenshots/r1-access-lists.png)
+![R1 access-list counters](screenshots/r1-access-lists.png)
 
 Counters were cleared before the test sequence, so every match shown corresponds to a documented test above.
 
