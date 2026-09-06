@@ -21,8 +21,8 @@ The point of this lab is not just "OSPF works." It is that the network **reroute
 
 | Item | Value |
 |---|---|
-| Simulator | Cisco Packet Tracer <!-- TODO: version --> |
-| Router model | <!-- TODO: e.g. ISR 2911 --> |
+| Simulator | Cisco Packet Tracer |
+| Router model | ISR 2911 |
 | Routers | 4 |
 | End devices | 4 (one PC per LAN) |
 | Routing protocol | OSPFv2, single area (Area 0) |
