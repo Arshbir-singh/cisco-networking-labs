@@ -398,14 +398,12 @@ This lab runs OSPF at its defaults so the behaviour above is easy to trace. A pr
 
 | Change | Why |
 |---|---|
-| `passive-interface default` + `no passive-interface` on transit links | Stops OSPF hellos being flooded out toward end hosts. Reduces noise and removes an attack surface — an untrusted device on the LAN should never be able to attempt an adjacency. |
 | `ip ospf network point-to-point` on each `/30` | Ethernet is treated as a broadcast network by default, so IOS runs a DR/BDR election on links that can only ever hold two routers. Point-to-point skips the election and forms adjacencies faster. |
 | OSPF authentication (MD5 or SHA) on transit links | Prevents a rogue router from injecting LSAs and poisoning the routing domain. |
 | `auto-cost reference-bandwidth 1000` on every router | Lets OSPF distinguish between link speeds above 100 Mbps. Must be identical domain-wide. |
 | Tuned hello/dead timers or BFD | Reduces soft-failure detection from ~40 s to sub-second. |
 
-<!-- TODO: Anything from this table you actually configure should be promoted out of
-     here and into its own section with a config block and a screenshot. -->
+
 
 ---
 
