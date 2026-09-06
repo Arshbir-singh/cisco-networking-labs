@@ -9,12 +9,12 @@ The point of this lab is not just "OSPF works." It is that the network **reroute
 ## What This Lab Demonstrates
 
 - OSPF neighbor adjacency formation across four routers in a single Area 0
-- Loopback interfaces used to produce deterministic OSPF router IDs
+- Router ID selection by both mechanisms — loopback election on three routers, explicit `router-id` on the fourth
+- Passive interfaces used to suppress hellos toward end hosts while still advertising the LAN prefix
 - Equal-cost multipath (ECMP) arising naturally from a symmetric ring topology
 - How the OSPF cost metric is calculated, and why the default reference bandwidth is a problem on Gigabit links
 - Automatic reconvergence after a link failure, verified in the routing table *and* with live end-to-end traffic
 - Full recovery — including the restoration of the ECMP pair — when the link is brought back
-
 ---
 
 ## Lab Environment
@@ -53,16 +53,16 @@ The ring is what makes this lab interesting. Because it is symmetric, R1 has two
 
 ## Addressing
 
-**Convention:** each router's LAN interface uses  `.254 ` and each PC uses `.1` in its own LAN. Point-to-point links use `/30` subnets, with the lower-numbered router taking `.1` and its neighbor taking `.2`.
+**Convention:** each router's LAN interface uses  `.254` and each PC uses `.1` in its own LAN. Point-to-point links use `/30` subnets, with the lower-numbered router taking `.1` and its neighbor taking `.2`.
 
 ### Point-to-Point Links
 
-| Link | Network | R‑side IP | Neighbour IP |
+| Link | Network | R‑side IP | Neighbor IP |
 |---|---|---|---|
 | R1 ↔ R2 | `10.0.1.0/30` | R1: `10.0.1.1` | R2: `10.0.1.2` |
 | R2 ↔ R3 | `10.0.2.0/30` | R2: `10.0.2.1` | R3: `10.0.2.2` |
 | R3 ↔ R4 | `10.0.20.0/30` | R3: `10.0.20.1` | R4: `10.0.20.2` |
-| R1 ↔ R4 | `10.0.10.0/30` | R4: `10.0.10.2` | R1: `10.0.10.1` |
+| R1 ↔ R4 | `10.0.10.0/30` | R1: `10.0.10.1` | R4: `10.0.10.2` |
 
 ### Interface Assignments
 
@@ -76,13 +76,13 @@ The ring is what makes this lab interesting. Because it is symmetric, R1 has two
 | R2 | Gi0/1 | `10.0.2.1/30` | R3 |
 | R2 | Gi0/2 | `192.168.2.254/24` | LAN 2 |
 | R2 | Lo0 | `2.2.2.2/32` | — |
-| R3 | Gi0/1 | `10.0.2.2/30` | R2 |
 | R3 | Gi0/0 | `10.0.20.1/30` | R4 |
+| R3 | Gi0/1 | `10.0.2.2/30` | R2 |
 | R3 | Gi0/2 | `192.168.3.254/24` | LAN 3 |
 | R3 | Lo0 | `3.3.3.3/32` | — |
 | R4 | Gi0/0 | `10.0.20.2/30` | R3 |
 | R4 | Gi0/1 | `10.0.10.2/30` | R1 |
-| R4 | Gi0/2| `192.168.4.254/24` | LAN 4 |
+| R4 | Gi0/2 | `192.168.4.254/24` | LAN 4 |
 | R4 | Lo0 | `4.4.4.4/32` | — |
 
 ### End Devices
@@ -98,8 +98,11 @@ The ring is what makes this lab interesting. Because it is symmetric, R1 has two
 
 ## OSPF Configuration
 
-Single OSPF process, single Area 0, on all four routers. Each router advertises its two transit links, its LAN, and its loopback.
+Single OSPF process, single Area 0, on all four routers. Each router advertises its two transit links, its LAN, and its loopback. 
 
+Each router's LAN interface (`Gi0/2`) is configured as **passive**. OSPF still advertises the `192.168.x.0/24` prefix, but stops sending hellos out that interface. There is no router on the far side to form an adjacency with, so the hellos are pure noise — and an untrusted device plugged into the LAN should never be able to attempt an adjacency in the first place.
+
+`Loopback0` is also marked passive on every router. This is a consistency measure rather than a functional change: OSPF assigns loopbacks the LOOPBACK network type and advertises them as stub host routes, so it never sends hellos out of one regardless. Marking it passive makes the intent explicit in the config — every interface that should never form an adjacency is declared as such, rather than relying on the reader knowing which ones OSPF exempts by default.
 
 ### R1
 
@@ -108,11 +111,14 @@ interface Loopback0
  ip address 1.1.1.1 255.255.255.255
 !
 router ospf 1
+ passive-interface Loopback0
+ passive-interface GigabitEthernet0/2
  network 10.0.1.0 0.0.0.3 area 0
  network 10.0.10.0 0.0.0.3 area 0
  network 192.168.1.0 0.0.0.255 area 0
  network 1.1.1.1 0.0.0.0 area 0
 ```
+
 ### R2
 
 ```cisco
@@ -120,11 +126,14 @@ interface Loopback0
  ip address 2.2.2.2 255.255.255.255
 !
 router ospf 1
+ passive-interface Loopback0
+ passive-interface GigabitEthernet0/2
  network 10.0.1.0 0.0.0.3 area 0
  network 10.0.2.0 0.0.0.3 area 0
  network 192.168.2.0 0.0.0.255 area 0
  network 2.2.2.2 0.0.0.0 area 0
 ```
+
 ### R3
 
 ```cisco
@@ -132,24 +141,29 @@ interface Loopback0
  ip address 3.3.3.3 255.255.255.255
 !
 router ospf 1
+ passive-interface Loopback0
+ passive-interface GigabitEthernet0/2
  network 10.0.2.0 0.0.0.3 area 0
  network 10.0.20.0 0.0.0.3 area 0
  network 192.168.3.0 0.0.0.255 area 0
  network 3.3.3.3 0.0.0.0 area 0
 ```
+
 ### R4
+
 ```cisco
 interface Loopback0
  ip address 4.4.4.4 255.255.255.255
 !
 router ospf 1
  router-id 4.4.4.4
+ passive-interface Loopback0
+ passive-interface GigabitEthernet0/2
  network 10.0.20.0 0.0.0.3 area 0
  network 10.0.10.0 0.0.0.3 area 0
  network 192.168.4.0 0.0.0.255 area 0
  network 4.4.4.4 0.0.0.0 area 0
 ```
-
 
 Note the asymmetry: R1, R2 and R3 have **no `router-id` command**, while R4 has one configured explicitly. That difference is intentional and is explained in the next section.
 
@@ -235,7 +249,7 @@ This lab intentionally leaves the default in place so the cost arithmetic above 
 show ip ospf neighbor
 ```
 
-Confirms each router has formed a FULL adjacency with both of its ring neighbours.
+Confirms each router has formed a FULL adjacency with both of its ring neighbors.
 
 ![OSPF Neighbors](screenshots/ospf-neighbors.png)
 
@@ -247,7 +261,7 @@ Confirms each router has formed a FULL adjacency with both of its ring neighbour
 show ip ospf database
 ```
 
-All four routers hold an **identical** database of four Type-1 (Router) LSAs — one per router in Area 0. This is the defining difference between a link-state protocol and a distance-vector one: every router builds its own map of the topology and runs SPF against it, rather than trusting a neighbour's summary of the world.
+All four routers hold an **identical** database of four Type-1 (Router) LSAs — one per router in Area 0. This is the defining difference between a link-state protocol and a distance-vector one: every router builds its own map of the topology and runs SPF against it, rather than trusting a neighbor's summary of the world.
 
 ![OSPF Database ](screenshots/ospf-database.png) 
 
@@ -260,7 +274,7 @@ show ip route ospf
 Dynamically learned routes appear with the `O` code and an administrative distance of 110.
 
 ![OSPF Routes](screenshots/ospf-routes.png)
-s
+
 ### 4. Protocol Configuration
 
 ```cisco
@@ -277,7 +291,7 @@ Confirms OSPF is running, shows the router ID it selected, and lists the network
 show ip ospf interface brief
 ```
 
-Confirms which interfaces are enabled for OSPF, and their cost and neighbour count.
+Confirms which interfaces are enabled for OSPF, and their cost and neighbor count.
 
 ![OSPF Interface Verification](screenshots/ospf-interface-brief.png)
 
@@ -285,11 +299,8 @@ Confirms which interfaces are enabled for OSPF, and their cost and neighbour cou
 
 ## Connectivity Testing
 
-End-to-end reachability across the ring, from a PC on one LAN to a PC three routers away:
+End-to-end reachability from PC1 to PC4 — across the ring, not just to the local gateway:
 
-```text
-PC1 → R1 → R4 → PC4
-```
 
 ```cisco
 ping 192.168.4.1
@@ -435,7 +446,7 @@ R4# clear ip ospf process
 
 ## Key Takeaways
 
-- **Loopbacks give you deterministic router IDs.** Without them, OSPF picks whatever physical interface holds the highest address, and that ID can change when an interface flaps.
+-  **A loopback gives you a deterministic router ID — but only if it exists before the OSPF process starts.** Without a loopback, OSPF picks whatever physical interface holds the highest address, and that ID can change when the interface flaps. With one added too late, OSPF keeps the ID it already chose until the process is cleared.
 - **ECMP is a property of the topology, not a setting.** R1 load-balanced to R3 because the ring made both directions cost exactly 3 — and the pair collapsed the moment one contributing path disappeared.
 - **The cost metric is fully explainable.** Every `[110/n]` in this lab decomposes into a count of interfaces, which also exposes the weakness of the 100 Mbps default reference bandwidth on Gigabit links.
 - **Reconvergence speed depends on how the link fails.** An interface going down is detected instantly; a neighbour going silent on a live link costs a 40-second dead interval.
