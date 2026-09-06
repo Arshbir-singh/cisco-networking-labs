@@ -1,274 +1,433 @@
-# Lab 3 — Single-Area OSPF Dynamic Routing
+# Lab 3 — Single-Area OSPF with Redundant Paths and Failover Testing
 
-## Overview
+Four Cisco routers in a ring running OSPF in a single Area 0, with equal-cost multipath between LANs and a full link-failure and recovery test.
 
-This lab demonstrates dynamic routing using **Open Shortest Path First (OSPF)** in a single OSPF Area 0 environment.
+The point of this lab is not just "OSPF works." It is that the network **reroutes around a dead link on its own**, keeps forwarding traffic the long way around the ring, and then reconverges back to the direct path when the link returns — with no manual routing changes anywhere.
 
-The topology uses multiple Cisco routers connected through point-to-point networks, with separate LAN networks behind the routers. OSPF dynamically exchanges routes so devices on remote networks can communicate without manually configured static routes.
+---
 
-## Objectives
+## What This Lab Demonstrates
 
-- Configure OSPF on multiple Cisco routers.
-- Establish OSPF neighbor adjacencies.
-- Use a single OSPF Area 0.
-- Advertise LAN and transit networks through OSPF.
-- Verify OSPF-learned routes.
-- Test end-to-end connectivity across multiple routers.
-- Use Cisco IOS commands to verify and troubleshoot OSPF.
-- Observe routing behavior in a topology with multiple paths.
+- OSPF neighbor adjacency formation across four routers in a single Area 0
+- Loopback interfaces used to produce deterministic OSPF router IDs
+- Equal-cost multipath (ECMP) arising naturally from a symmetric ring topology
+- How the OSPF cost metric is calculated, and why the default reference bandwidth is a problem on Gigabit links
+- Automatic reconvergence after a link failure, verified in the routing table *and* with live end-to-end traffic
+- Full recovery — including the restoration of the ECMP pair — when the link is brought back
+
+---
+
+## Lab Environment
+
+| Item | Value |
+|---|---|
+| Simulator | Cisco Packet Tracer <!-- TODO: version --> |
+| Router model | <!-- TODO: e.g. ISR 2911 --> |
+| Routers | 4 |
+| End devices | 4 (one PC per LAN) |
+| Routing protocol | OSPFv2, single area (Area 0) |
+
+---
 
 ## Topology
 
 ![OSPF Topology](screenshots/topology.png)
 
-The topology consists of four Cisco routers connected through multiple point-to-point links. Each router also provides connectivity to a local LAN.
+The four routers form a **ring**: R1 → R2 → R3 → R4 → R1. Every router also serves a local LAN.
 
-The multiple router-to-router paths allow OSPF to dynamically determine routes through the network.
+The ring is what makes this lab interesting. Because it is symmetric, R1 has two equal-cost paths to R3 (clockwise via R2, counter-clockwise via R4), and every router remains reachable if any single link fails. Both of those properties are tested below.
 
-## Network Addressing
+```text
+        192.168.1.0/24            192.168.2.0/24
+             │                          │
+            [R1]────10.0.1.0/30────────[R2]
+             │                          │
+      10.0.10.0/30                10.0.2.0/30
+             │                          │
+            [R4]────10.0.20.0/30───────[R3]
+             │                          │
+        192.168.4.0/24            192.168.3.0/24
+```
 
-### Point-to-Point Networks
+---
 
-| Link | Network |
-|---|---|
-| R1 ↔ R2 | `10.0.1.0/30` |
-| R2 ↔ R3 | `10.0.2.0/30` |
-| R3 ↔ R4 | `10.0.20.0/30` |
-| R1 ↔ R4 | `10.0.10.0/30` |
+## Addressing
 
-### LAN Networks
+**Convention:** each router's LAN interface uses  `.254 ` and each PC uses `.1` in its own LAN. Point-to-point links use `/30` subnets, with the lower-numbered router taking `.1` and its neighbor taking `.2`.
 
-| Router | Local Network |
-|---|---|
-| R1 | `192.168.1.0/24` |
-| R2 | `192.168.2.0/24` |
-| R3 | `192.168.3.0/24` |
-| R4 | `192.168.4.0/24` |
-### Loopback Interfaces
+### Point-to-Point Links
 
-| Router | Loopback Address | Purpose |
+| Link | Network | R‑side IP | Neighbour IP |
+|---|---|---|---|
+| R1 ↔ R2 | `10.0.1.0/30` | R1: `10.0.1.1` | R2: `10.0.1.2` |
+| R2 ↔ R3 | `10.0.2.0/30` | R2: `10.0.2.1` | R3: `10.0.2.2` |
+| R3 ↔ R4 | `10.0.20.0/30` | R3: `10.0.20.1` | R4: `10.0.20.2` |
+| R1 ↔ R4 | `10.0.10.0/30` | R4: `10.0.10.2` | R1: `10.0.10.1` |
+
+### Interface Assignments
+
+| Router | Interface | IP Address | Connects To |
+|---|---|---|---|
+| R1 | Gi0/0 | `10.0.1.1/30` | R2 |
+| R1 | Gi0/1 | `10.0.10.1/30` | R4 |
+| R1 | Gi0/2 | `192.168.1.254/24` | LAN 1 |
+| R1 | Lo0 | `1.1.1.1/32` | — |
+| R2 | Gi0/0 | `10.0.1.2/30` | R1 |
+| R2 | Gi0/1 | `10.0.2.1/30` | R3 |
+| R2 | Gi0/2 | `192.168.2.254/24` | LAN 2 |
+| R2 | Lo0 | `2.2.2.2/32` | — |
+| R3 | Gi0/1 | `10.0.2.2/30` | R2 |
+| R3 | Gi0/0 | `10.0.20.1/30` | R4 |
+| R3 | Gi0/2 | `192.168.3.254/24` | LAN 3 |
+| R3 | Lo0 | `3.3.3.3/32` | — |
+| R4 | Gi0/0 | `10.0.20.2/30` | R3 |
+| R4 | Gi0/1 | `10.0.10.2/30` | R1 |
+| R4 | Gi0/2| `192.168.4.254/24` | LAN 4 |
+| R4 | Lo0 | `4.4.4.4/32` | — |
+
+### End Devices
+
+| Host | IP Address | Default Gateway |
 |---|---|---|
-| R1 | `1.1.1.1/32` | OSPF router ID / logical interface |
-| R2 | `2.2.2.2/32` | OSPF router ID / logical interface |
-| R3 | `3.3.3.3/32` | OSPF router ID / logical interface |
-| R4 | `4.4.4.4/32` | OSPF router ID / logical interface |
+| PC1 | `192.168.1.1/24` |192.168.1.254 |
+| PC2 | `192.168.2.1/24` |192.168.2.254 |
+| PC3 | `192.168.3.1/24` |192.168.3.254 |
+| PC4 | `192.168.4.1/24` |192.168.4.254 |
+
+---
+
+## OSPF Configuration
+
+Single OSPF process, single Area 0, on all four routers. Each router advertises its two transit links, its LAN, and its loopback.
 
 
-
-## OSPF Design
-
-This lab uses:
-
-- **OSPF**
-- **Single Area 0**
-- OSPF process ID configured on the routers
-- Point-to-point router links
-- Dynamically advertised LAN and transit networks
-
-Example configuration:
+### R1
 
 ```cisco
+interface Loopback0
+ ip address 1.1.1.1 255.255.255.255
+!
 router ospf 1
- router-id 1.1.1.1
  network 10.0.1.0 0.0.0.3 area 0
  network 10.0.10.0 0.0.0.3 area 0
  network 192.168.1.0 0.0.0.255 area 0
+ network 1.1.1.1 0.0.0.0 area 0
+```
+### R2
+
+```cisco
+interface Loopback0
+ ip address 2.2.2.2 255.255.255.255
+!
+router ospf 1
+ network 10.0.1.0 0.0.0.3 area 0
+ network 10.0.2.0 0.0.0.3 area 0
+ network 192.168.2.0 0.0.0.255 area 0
+ network 2.2.2.2 0.0.0.0 area 0
+```
+### R3
+
+```cisco
+interface Loopback0
+ ip address 3.3.3.3 255.255.255.255
+!
+router ospf 1
+ network 10.0.2.0 0.0.0.3 area 0
+ network 10.0.20.0 0.0.0.3 area 0
+ network 192.168.3.0 0.0.0.255 area 0
+ network 3.3.3.3 0.0.0.0 area 0
+```
+### R4
+```cisco
+interface Loopback0
+ ip address 4.4.4.4 255.255.255.255
+!
+router ospf 1
+ router-id 4.4.4.4
+ network 10.0.20.0 0.0.0.3 area 0
+ network 10.0.10.0 0.0.0.3 area 0
+ network 192.168.4.0 0.0.0.255 area 0
+ network 4.4.4.4 0.0.0.0 area 0
 ```
 
-The exact network statements and router IDs should match the configuration used on each router.
 
-## OSPF Router ID Selection
+Note the asymmetry: R1, R2 and R3 have **no `router-id` command**, while R4 has one configured explicitly. That difference is intentional and is explained in the next section.
 
-No explicit `router-id` command was configured.
+---
 
-Each router has a loopback interface with a unique /32 address. When an explicit OSPF router ID is not configured, OSPF can select the highest IP address on a loopback interface as the router ID.
+## Router ID Selection
 
-In this lab, the loopback addresses provide deterministic router IDs:
+OSPF picks its router ID in this order:
 
-| Router | Loopback | OSPF Router ID |
-|---|---|---|
-| R1 | `1.1.1.1` | `1.1.1.1` |
-| R2 | `2.2.2.2` | `2.2.2.2` |
-| R3 | `3.3.3.3` | `3.3.3.3` |
-| R4 | `4.4.4.4` | `4.4.4.4` |
+1. An explicitly configured `router-id` value
+2. The highest IP address on any active loopback interface
+3. The highest IP address on any active physical interface
 
-This demonstrates how loopback interfaces can be used to provide stable OSPF router IDs without manually configuring the `router-id` command.
+This topology exercises **both** of the first two rules.
 
-> **Note:** OSPF selects its router ID when the OSPF process starts. If a loopback is added or changed after the process has already selected a router ID, the OSPF process may need to be restarted for the new router ID to be selected
+R1, R2 and R3 have no `router-id` configured, so each falls through to rule 2 and elects its loopback. R4 has the ID set explicitly with `router-id 4.4.4.4`. Every router ends up with a predictable ID, but by two different mechanisms:
+
+| Router | Loopback | OSPF Router ID | Selected By |
+|---|---|---|---|
+| R1 | `1.1.1.1` | `1.1.1.1` | Highest loopback (rule 2) |
+| R2 | `2.2.2.2` | `2.2.2.2` | Highest loopback (rule 2) |
+| R3 | `3.3.3.3` | `3.3.3.3` | Highest loopback (rule 2) |
+| R4 | `4.4.4.4` | `4.4.4.4` | Explicit `router-id` (rule 1) |
+
+The two methods land on the same value on R4, which is exactly why nothing in the neighbor or route output reveals the difference — you have to look at the configuration to see it.
+
+```cisco
+R4# show run | section router ospf
+R4# show ip protocols
+```
+
+![OSPF router-id](screenshots/r4-router-id.png)
+
+**Why configure it explicitly at all?** OSPF selects its router ID once, when the process starts, and then keeps it. If a loopback is added or renumbered after the process is already running, the ID does not update until the process is cleared:
+
+```cisco
+R4# clear ip ospf process
+```
+
+An explicit `router-id` sidesteps that ordering problem entirely — the ID is whatever you declared it to be, regardless of what interfaces exist or when they appeared. That predictability is why production designs generally set it explicitly rather than relying on the election, even when a loopback is present.
+
+The loopback still earns its place either way: without one, a router with no explicit ID falls through to rule 3 and picks whichever physical interface holds the highest address — an ID that can change when that interface goes down. A loopback never goes down.
+
+---
+
+## Understanding the OSPF Cost Metric
+
+Every metric in the routing tables below follows from one formula:
+
+```text
+cost = reference bandwidth ÷ interface bandwidth   (minimum 1)
+```
+
+The default reference bandwidth is **100 Mbps**. Every interface in this topology is Gigabit Ethernet, and a loopback is treated as cost 1 as well — so **every single interface here costs exactly 1**. That makes the arithmetic easy to follow:
+
+| Route from R1 | Path | Cost breakdown | Metric |
+|---|---|---|---|
+| `2.2.2.2/32` | R1 → R2 | 1 link + 1 loopback | `[110/2]` |
+| `4.4.4.4/32` | R1 → R4 | 1 link + 1 loopback | `[110/2]` |
+| `3.3.3.3/32` | R1 → R2 → R3 | 2 links + 1 loopback | `[110/3]` |
+| `3.3.3.3/32` | R1 → R4 → R3 | 2 links + 1 loopback | `[110/3]` |
+
+The last two rows are the same cost, which is exactly why R3's networks install as an **equal-cost multipath pair** rather than a single route. That is a property of the ring, not a coincidence.
+
+### The problem with the default
+
+Because the default reference bandwidth is 100 Mbps, *anything* at 100 Mbps or faster is rounded to cost 1. A 100 Mbps FastEthernet link and a 10 Gbps link would look identical to OSPF, and it would happily load-balance across both. In production the fix is to raise the reference bandwidth on **every** router in the domain — a mismatch causes inconsistent path selection:
+
+```cisco
+router ospf 1
+ auto-cost reference-bandwidth 1000
+```
+
+This lab intentionally leaves the default in place so the cost arithmetic above stays readable.
+
+---
 
 ## Verification
 
-### 1. Verify OSPF Neighbor Adjacencies
-
-Run:
+### 1. Neighbor Adjacencies
 
 ```cisco
 show ip ospf neighbor
 ```
 
-This verifies that neighboring routers have successfully formed OSPF adjacencies.
+Confirms each router has formed a FULL adjacency with both of its ring neighbours.
 
 ![OSPF Neighbors](screenshots/ospf-neighbors.png)
 
-### 2. Verify OSPF Routes
 
-Run:
+
+### 2. Link-State Database
+
+```cisco
+show ip ospf database
+```
+
+All four routers hold an **identical** database of four Type-1 (Router) LSAs — one per router in Area 0. This is the defining difference between a link-state protocol and a distance-vector one: every router builds its own map of the topology and runs SPF against it, rather than trusting a neighbour's summary of the world.
+
+![OSPF Database ](screenshots/ospf-database.png) 
+
+### 3. OSPF-Learned Routes
 
 ```cisco
 show ip route ospf
 ```
 
-Routes learned dynamically through OSPF should appear with an `O` code in the routing table.
+Dynamically learned routes appear with the `O` code and an administrative distance of 110.
 
 ![OSPF Routes](screenshots/ospf-routes.png)
-
-### 3. Verify OSPF Configuration
-
-Run:
+s
+### 4. Protocol Configuration
 
 ```cisco
 show ip protocols
 ```
 
-This helps verify that OSPF is active and that the expected networks are being advertised.
+Confirms OSPF is running, shows the router ID it selected, and lists the networks being advertised.
 
 ![OSPF Protocols](screenshots/ospf-protocols.png)
 
-### 4. Verify OSPF-Enabled Interfaces
-
-Run:
+### 5. Participating Interfaces
 
 ```cisco
 show ip ospf interface brief
 ```
 
-This verifies which interfaces are participating in OSPF.
+Confirms which interfaces are enabled for OSPF, and their cost and neighbour count.
 
 ![OSPF Interface Verification](screenshots/ospf-interface-brief.png)
 
+---
+
 ## Connectivity Testing
 
-The main objective is to confirm that devices on remote networks can communicate through multiple OSPF routers.
-
-Example:
+End-to-end reachability across the ring, from a PC on one LAN to a PC three routers away:
 
 ```text
-PC1
- ↓
-R1
- ↓
-R2 / R3
- ↓
-R4
- ↓
-Remote LAN
+PC1 → R1 → R4 → PC4
 ```
 
-An end-to-end ping is used to verify connectivity between remote networks.
-
-```text
-ping <remote-host-ip>
+```cisco
+ping 192.168.4.1
 ```
 
 ![End-to-End Connectivity](screenshots/end-to-end-connectivity.png)
 
-## Path Verification
+### Path Verification
 
-Because the topology contains multiple paths, traceroute can be used to observe the path selected by the routing table. Here i traced the path taken by PC1 to PC3.
+With two viable paths through the ring, `traceroute` shows which one the routing table actually chose:
 
-```text
+```cisco
 traceroute 192.168.3.1
 ```
 
 ![OSPF Traceroute](screenshots/ospf-traceroute.png)
 
+---
 
-### Failure
+## Failure Test — Shutting the R1 ↔ R4 Link
 
+```cisco
+R1(config)# interface GigabitEthernet0/1
+R1(config-if)# shutdown
 ```
-R1(config)#int g0/1
-R1(config-if)#shutdown
-```
-![interface shutdown](screenshots/link-r1-r4-shutdown.png)
 
-R1's routing table immediately reflects the loss:
+![Interface shutdown](screenshots/link-r1-r4-shutdown.png)
+
+R1's routing table reflects the loss immediately:
 
 | Destination | Before | After |
 |---|---|---|
-| `4.4.4.4/32`, `192.168.4.0/24` | `[110/2]` via 10.0.10.2 (direct) | `[110/4]` via 10.0.1.2 (via R2 → R3) |
-| `3.3.3.3/32`, `192.168.3.0/24` | Two equal `[110/3]` paths (via R2 and via R4) | One `[110/3]` path only (via R2) |
-| `2.2.2.2/32`, `192.168.2.0/24` | `[110/2]` via 10.0.1.2 | Unchanged — never used the failed link |
+| `4.4.4.4/32`, `192.168.4.0/24` | `[110/2]` via `10.0.10.2` (direct) | `[110/4]` via `10.0.1.2` (R2 → R3 → R4) |
+| `3.3.3.3/32`, `192.168.3.0/24` | Two equal `[110/3]` paths (via R2 and via R4) | One `[110/3]` path (via R2 only) |
+| `2.2.2.2/32`, `192.168.2.0/24` | `[110/2]` via `10.0.1.2` | Unchanged — never used the failed link |
 
-![ip route](screenshots/ospf-show-ip-route-after.png)
+![Routing table after failure](screenshots/ospf-show-ip-route-after.png)
 
-The middle row is the detail that matters most: R3's equal-cost pair collapses to a single path because one of its two contributing routes ran through the now-dead link — proof the ECMP wasn't a coincidence, it was genuinely built on two independent paths.
+The middle row is the one that matters. R3's equal-cost pair collapses to a single entry because one of the two contributing paths ran through the now-dead link. That is direct evidence the ECMP was real — two genuinely independent paths, not a display artifact.
 
-End-to-end traffic confirms it, not just the table:
+The cost change on row one is also worth reading: `[110/2]` → `[110/4]` is exactly the two extra hops the traffic now takes.
 
-```
+### Traffic confirms it
+
+A routing table is a claim. Traffic is proof:
+
+```cisco
 traceroute 192.168.4.1
 ```
-![traceroute](screenshots/connectivity-and-tracert-check.png)
 
-Traffic takes the long way around the ring — R1 → R2 → R3 → R4 — and still arrives with zero loss.
+![Traceroute after failure](screenshots/connectivity-and-tracert-check.png)
 
-### Recovery
+Traffic takes the long way around the ring — R1 → R2 → R3 → R4 — and arrives with zero loss.
 
+### How fast was that, really?
+
+The reconvergence here looked instantaneous, and it was — but only because `shutdown` takes the line protocol down. The interface-down event is detected in hardware and immediately triggers an LSA flood, so SPF reruns within milliseconds.
+
+A **soft failure** behaves very differently. If the physical link stays up but the neighbour stops responding (a failed remote device, a provider fault mid-path, a misconfiguration), OSPF has no interface event to react to. It has to wait for the **dead interval** to expire — 40 seconds by default, with hellos every 10 seconds — before it declares the neighbour down and reconverges.
+
+That gap is why production designs tune the timers or run BFD:
+
+```cisco
+interface GigabitEthernet0/1
+ ip ospf hello-interval 3
+ ip ospf dead-interval 9
 ```
-R1(config)#int g0/1
-R1(config-if)#no shutdown
-```
-![re-enabling](screenshots/re-enabling-interface.png)
 
-The routing table fully reconverges — including the ECMP pair for R3, which returns to two equal paths, not just one:
 
+---
+
+## Recovery
+
+```cisco
+R1(config)# interface GigabitEthernet0/1
+R1(config-if)# no shutdown
 ```
+
+![Re-enabling the interface](screenshots/re-enabling-interface.png)
+
+The routing table fully reconverges — including the ECMP pair for R3, which returns to two equal paths rather than staying at one:
+
+```text
 O  4.4.4.4/32 [110/2] via 10.0.10.2, GigabitEthernet0/1
 O  3.3.3.3/32 [110/3] via 10.0.1.2, GigabitEthernet0/0
               [110/3] via 10.0.10.2, GigabitEthernet0/1
 ```
-![re-enabling ip route](screenshots/show-ip-route-re-enabling.png)
 
+![Routing table after recovery](screenshots/show-ip-route-re-enabling.png)
 
 And traffic returns to the direct path:
 
-```
+```cisco
 traceroute 192.168.4.1
 ```
-![re-enabling tracert](screenshots/tracert-after-re-enabling.png)
 
+![Traceroute after recovery](screenshots/tracert-after-re-enabling.png)
 
-Three hops instead of five, straight through R4 again — the network fully healed itself with no manual routing changes anywhere
+Three hops instead of five, straight through R4 again. The network healed itself in both directions with no manual routing changes anywhere.
 
-## Expected Results
+---
 
-| Verification | Expected Result |
+## Production Considerations
+
+This lab runs OSPF at its defaults so the behaviour above is easy to trace. A production deployment of the same topology would add:
+
+| Change | Why |
 |---|---|
-| OSPF neighbor relationships | ✅ Established |
-| Remote OSPF routes | ✅ Present in routing table |
-| OSPF-enabled interfaces | ✅ Active |
-| Remote LAN connectivity | ✅ Successful |
-| Multi-hop routing | ✅ Successful |
-| OSPF routes identified with `O` | ✅ Confirmed |
+| `passive-interface default` + `no passive-interface` on transit links | Stops OSPF hellos being flooded out toward end hosts. Reduces noise and removes an attack surface — an untrusted device on the LAN should never be able to attempt an adjacency. |
+| `ip ospf network point-to-point` on each `/30` | Ethernet is treated as a broadcast network by default, so IOS runs a DR/BDR election on links that can only ever hold two routers. Point-to-point skips the election and forms adjacencies faster. |
+| OSPF authentication (MD5 or SHA) on transit links | Prevents a rogue router from injecting LSAs and poisoning the routing domain. |
+| `auto-cost reference-bandwidth 1000` on every router | Lets OSPF distinguish between link speeds above 100 Mbps. Must be identical domain-wide. |
+| Tuned hello/dead timers or BFD | Reduces soft-failure detection from ~40 s to sub-second. |
 
+<!-- TODO: Anything from this table you actually configure should be promoted out of
+     here and into its own section with a config block and a screenshot. -->
+
+---
+
+## Issues Encountered
+
+
+
+---
 
 ## Key Takeaways
 
-This lab reinforced:
+- **Loopbacks give you deterministic router IDs.** Without them, OSPF picks whatever physical interface holds the highest address, and that ID can change when an interface flaps.
+- **ECMP is a property of the topology, not a setting.** R1 load-balanced to R3 because the ring made both directions cost exactly 3 — and the pair collapsed the moment one contributing path disappeared.
+- **The cost metric is fully explainable.** Every `[110/n]` in this lab decomposes into a count of interfaces, which also exposes the weakness of the 100 Mbps default reference bandwidth on Gigabit links.
+- **Reconvergence speed depends on how the link fails.** An interface going down is detected instantly; a neighbour going silent on a live link costs a 40-second dead interval.
+- **Verify with traffic, not just tables.** A routing table entry says what the router intends to do. A traceroute says what actually happened.
 
-- Dynamic routing fundamentals
-- OSPF neighbor formation
-- OSPF Area 0
-- Router IDs
-- OSPF network advertisement
-- OSPF-learned routes
-- Point-to-point addressing using `/30` networks
-- Loopback interfaces
-- End-to-end routing verification
+---
 
+## Files
 
-## Project File
-
-The completed Packet Tracer project is included in this repository:
-
-`ospf.pkt`
+| File | Description |
+|---|---|
+| `ospf.pkt` | Completed Packet Tracer project |
+| `screenshots/` | Verification and failover captures |
