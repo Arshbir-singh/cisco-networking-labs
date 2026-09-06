@@ -411,7 +411,27 @@ This lab runs OSPF at its defaults so the behaviour above is easy to trace. A pr
 
 ## Issues Encountered
 
+### R4's router ID did not match its loopback
 
+**What I saw.** `show ip ospf neighbor` on R1 and R3 listed their R4 neighbor with an ID from its Gi0/2 interface `192.168.4.254` instead of `4.4.4.4`. Nothing was broken — adjacencies were FULL and routing worked end to end — but R4's LSAs were identified by a LAN address while every other router in the database was identified by its loopback. In a four-router lab that is cosmetic; in a large area it makes the link-state database considerably harder to read, and router ID is also the tiebreaker in DR/BDR elections.
+
+**Why it happened.** I started the OSPF process on R4 before configuring its loopback. With no `router-id` set and no loopback present, OSPF fell through to rule 3 of the selection order and elected the highest IP address on an active physical interface — the LAN interface. Because OSPF chooses the router ID once, at process start, and then holds it, adding the loopback afterwards had no effect at all.
+
+**Fix.** Configure the loopback, set the ID explicitly, and restart the process so the new value is actually selected:
+
+```cisco
+R4(config)# interface Loopback0
+R4(config-if)# ip address 4.4.4.4 255.255.255.255
+R4(config-if)# exit
+R4(config)# router ospf 1
+R4(config-router)# router-id 4.4.4.4
+R4(config-router)# end
+R4# clear ip ospf process
+```
+
+`clear ip ospf process` is what makes the change take effect, and it is not a casual command — it tears down every adjacency on the router and rebuilds them from scratch. On a production device that is a brief outage, so it belongs in a maintenance window.
+
+**What I'd do differently.** Configure loopbacks before starting the OSPF process, or set `router-id` explicitly from the beginning. Either one alone would have prevented this — the loopback plus a process clear would have produced the same `4.4.4.4` result without the explicit command. I kept the explicit `router-id` on R4 because it removes the dependency on interface configuration order entirely, which is why production designs tend to set it rather than rely on the election.
 
 ---
 
