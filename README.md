@@ -11,7 +11,7 @@ Hands-on Cisco networking labs built in Packet Tracer, covering VLANs, dynamic r
 | 03 | [Single-Area OSPF](./03-single-area-ospf)| Dynamic routing, redundancy, ECMP load balancing | Live  |
 | 04 |[ NAT/PAT + DHCP](./04-dhcp-nat) | PAT overload, DHCP services |Live |
 | 05 |[ Layer 2 Security](./05-layer-2-security) | Port security, DHCP snooping, Dynamic ARP Inspection | Live |
-| 06 | ACLs | Extended named ACLs, tiered access policy |  In progress |
+| 06 | [ACLs](./06-acls) | Extended named ACLs, tiered access policy |  live |
 | 07 | Network Automation | Python + Netmiko |  Planned |
 
 ## What each project includes
