@@ -98,7 +98,10 @@ Core-Sw2 active/root for VLANs 20, 40:
 ![EtherChannel summary](screenshots/etherchannel-summary.png)
 
 **ACL enforcement (match counters, both cores)**
-![ACL match counters](screenshots/acl-match-counters.png)
+
+![ACL match counters](screenshots/access-list-core-sw1.png)
+
+![ACL match counters](screenshots/access-list-core-sw2.png)
 
 **Segmentation proof** — Sales → Server succeeds, Sales → HR blocked:
 ![Ping segmentation test](screenshots/ping-segmentation-test.png)
