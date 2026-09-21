@@ -84,14 +84,17 @@ These ACLs are applied identically on **both** core switches — since either co
 ![Core-Sw1 HSRP](screenshots/core-sw1-hsrp.png)
 
 ![Core-Sw1 STP](screenshots/core-sw1-stp-vlan-10,30.png)
+
 ![Core-Sw1 STP](screenshots/core-sw1-stp-vlan-50,99.png)
 
 Core-Sw2 active/root for VLANs 20, 40:
+
 ![Core-Sw2 HSRP](screenshots/core-sw2-hsrp.png)
 
 ![Core-Sw2 STP](screenshots/core-sw2-stp.png)
 
 **EtherChannel status (Po1, LACP)**
+
 ![EtherChannel summary](screenshots/etherchannel-summary.png)
 
 **ACL enforcement (match counters, both cores)**
