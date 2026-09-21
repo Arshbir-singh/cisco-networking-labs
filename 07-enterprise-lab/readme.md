@@ -72,20 +72,23 @@ These ACLs are applied identically on **both** core switches — since either co
 ## Known Limitations
 
 - **OSPF authentication uses plaintext (simple) auth**, not MD5/SHA. This was a deliberate choice to demonstrate the configuration; a production design would use MD5 or a SHA key-chain instead.
-- **NTP and centralized syslog are not configured** in this lab — deferred to a separate project, as the server here is already at capacity.
+
 
 ## Verification
 
-Screenshots below assume the filenames shown — rename yours to match, or update the paths.
 
 **Topology**
 ![Topology diagram](screenshots/topology.png)
 
 **HSRP + STP root alignment** — Core-Sw1 active/root for VLANs 10, 30, 50, 99:
-![Core-Sw1 HSRP and STP](screenshots/core-sw1-hsrp-stp.png)
+![Core-Sw1 HSRP](screenshots/core-sw1-hsrp.png)
+
+![Core-Sw1 STP](screenshots/core-sw1-stp.png)
 
 Core-Sw2 active/root for VLANs 20, 40:
-![Core-Sw2 HSRP and STP](screenshots/core-sw2-hsrp-stp.png)
+![Core-Sw2 HSRP](screenshots/core-sw2-hsrp.png)
+
+![Core-Sw2 STP](screenshots/core-sw2-stp.png)
 
 **EtherChannel status (Po1, LACP)**
 ![EtherChannel summary](screenshots/etherchannel-summary.png)
