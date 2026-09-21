@@ -104,13 +104,18 @@ Core-Sw2 active/root for VLANs 20, 40:
 ![ACL match counters](screenshots/access-list-core-sw2.png)
 
 **Segmentation proof** — Sales → Server succeeds, Sales → HR blocked:
+
 ![Ping segmentation test](screenshots/ping-segmentation-test.png)
 
 **OSPF neighbor adjacency**
+
 ![OSPF neighbors](screenshots/ospf-neighbors.png)
 
 **DHCP snooping bindings and port security**
-![DHCP snooping and port security](screenshots/dhcp-port-security.png)
+
+![DHCP snooping and port security](screenshots/port-security.png)
+
+![DHCP snooping and port security](screenshots/dhcp-snooping.png)
 
 
 
