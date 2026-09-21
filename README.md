@@ -1,6 +1,7 @@
 # Cisco Networking Labs
 
-Hands-on Cisco networking labs built in Packet Tracer, covering VLANs, dynamic routing, edge services, and Layer 2 security. Built while working through CCNA-level networking (CCNA and A+ certified), with each project documented by a topology diagram, working configs, and real verification output — not just clean configs, but proof they work.
+
+Hands-on networking labs built in Cisco Modeling Labs (CML) and Cisco packet tracer progressing from foundational VLAN and routing concepts up to a full enterprise-scale design. Each lab includes device configurations and verification output (show commands, ping tests). Built while working through CCNA-level networking (CCNA and A+ certified), with each project documented by a topology diagram, working configs, and real verification output.
 
 ## Projects
 
