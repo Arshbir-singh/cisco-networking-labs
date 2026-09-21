@@ -113,9 +113,9 @@ Core-Sw2 active/root for VLANs 20, 40:
 
 **DHCP snooping bindings and port security**
 
-![DHCP snooping and port security](screenshots/port-security.png)
+![DHCP snooping and port security](screenshots/access-sw1-dhcp-port-security.png)
 
-![DHCP snooping and port security](screenshots/dhcp-snooping.png)
+![DHCP snooping and port security](screenshots/access-sw2-dhcp-port-security.png)
 
 
 
