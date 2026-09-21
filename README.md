@@ -12,7 +12,7 @@ Hands-on Cisco networking labs built in Packet Tracer, covering VLANs, dynamic r
 | 04 |[ NAT/PAT + DHCP](./04-dhcp-nat) | PAT overload, DHCP services |Live |
 | 05 |[ Layer 2 Security](./05-layer-2-security) | Port security, DHCP snooping, Dynamic ARP Inspection | Live |
 | 06 | [ACLs](./06-acls) | Extended named ACLs, tiered access policy |  live |
-| 07 | Network Automation | Python + Netmiko |  Planned |
+| 07 | [ ENTERPRISE LAB](./07-enterprise-lab) | CML, DYNAMIC ROUTING, DHCP services, NAT/PAT ,layer-2 security, ACLs,ETHERCHANNEL, etc | Live |
 
 ## What each project includes
 
