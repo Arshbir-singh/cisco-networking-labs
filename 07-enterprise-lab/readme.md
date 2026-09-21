@@ -109,7 +109,7 @@ Core-Sw2 active/root for VLANs 20, 40:
 
 **OSPF neighbor adjacency**
 
-![OSPF neighbors](screenshots/ospf-neighbors.png)
+![OSPF neighbors](screenshots/ospf-neighbor.png)
 
 **DHCP snooping bindings and port security**
 
