@@ -125,6 +125,6 @@ Core-Sw2 active/root for VLANs 20, 40:
 
 ## Tools
 
-Built and verified in Cisco Modeling Labs (Personal), using Wireshark for packet-level verification and a structured OSI-model troubleshooting approach throughout.
+Built and verified in Cisco Modeling Labs (Personal) and a structured OSI-model troubleshooting approach throughout.
 
 
