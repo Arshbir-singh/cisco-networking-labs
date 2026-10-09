@@ -90,9 +90,9 @@ The CML-emulated IOS nodes cannot hold an accurate clock. Chrony on the Ubuntu n
 
 **During the failure** — Vlan10 shut on Core-Sw1, Core-Sw2 Active for VLAN 10:
 
-![Core-Sw1 during failure](screenshots/hsrp-during-core-sw1.png)
+![Core-Sw1 during failure](screenshots/hsrp-after-core-sw1.png)
 
-![Core-Sw2 during failure](screenshots/hsrp-during-core-sw2.png)
+![Core-Sw2 during failure](screenshots/hsrp-after-core-sw2.png)
 
 **Syslog** — HSRP state changes received by LibreNMS:
 
