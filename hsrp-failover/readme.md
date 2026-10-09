@@ -1,6 +1,6 @@
 # HSRP Failover Test with LibreNMS Alerting
 
-Part of Phase 2 of the [Enterprise Capstone Lab](./07-enterprise-lab).
+Part of Phase 2 of the Enterprise Capstone Lab.
 
 ## Objective
 
