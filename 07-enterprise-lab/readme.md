@@ -27,7 +27,7 @@ A dual-core, multi-VLAN enterprise network built in Cisco Modeling Labs (CML), c
 
 Core-Sw1 and Core-Sw2 are cross-connected to *both* access switches for L2 redundancy, with a dedicated routed point-to-point link between the cores for OSPF, kept separate from the LACP trunk that extends VLANs for HSRP peering.
 
-Phase 2 adds an Ubuntu Server node on the Server VLAN (192.168.50.10) that hosts the monitoring stack.
+In Phase 2, the Ubuntu server on the Server VLAN (192.168.50.10), which also provides DHCP, hosts the monitoring stack.
 
 ## Objectives
 
@@ -60,7 +60,7 @@ Phase 2 adds an Ubuntu Server node on the Server VLAN (192.168.50.10) that hosts
 | Edge – Core-Sw2 | 10.0.3.0/30 |
 | Core-Sw1 – Core-Sw2 | 10.0.1.0/30 |
 | Loopbacks | 172.16.2.0/24 (per device) |
-| Monitoring server (Phase 2) | 192.168.50.10 (Server VLAN) |
+| Server (DHCP, plus monitoring in Phase 2) | 192.168.50.10 (Server VLAN) |
 
 ## Key Design Decisions
 
@@ -83,7 +83,7 @@ These ACLs are applied identically on **both** core switches — since either co
 
 ## Phase 2: Monitoring and Operations
 
-Phase 1 built the network; Phase 2 adds the tooling to observe it and to prove that its redundancy works. A single Ubuntu Server node on the Server VLAN (192.168.50.10) runs:
+Phase 1 built the network; Phase 2 adds the tooling to observe it and to prove that its redundancy works. The Ubuntu server on the Server VLAN (192.168.50.10), which also provides DHCP, runs:
 
 - **LibreNMS** — SNMP polling of all five network devices (interfaces, health sensors, HSRP state) and alerting
 - **rsyslog** — central collection of device logs, viewed on the LibreNMS Syslog page
@@ -206,7 +206,7 @@ Core-Sw2 active/root for VLANs 20, 40:
 
 ## Repo Contents
 
-- `capstone_enterprise_lab_redacted.yaml` — full CML topology export, including the monitoring server (enable secrets, username hashes, the OSPF authentication key, the SNMP community string, and the server's login password have been redacted before publishing)
+- `capstone_enterprise_lab_redacted.yaml` — full CML topology export (enable secrets, username hashes, the OSPF authentication key, and the SNMP community strings have been redacted before publishing)
 - `hsrp-failover-test.md` — Phase 2 HSRP failover test: method, timeline and evidence
 - `screenshots/` — verification captures for both phases
 
